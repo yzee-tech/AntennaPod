@@ -24,6 +24,7 @@ import java.util.List;
 import de.danoeh.antennapod.R;
 import de.danoeh.antennapod.activity.MainActivity;
 import de.danoeh.antennapod.model.feed.FeedItem;
+import de.danoeh.antennapod.storage.preferences.UserPreferences;
 import de.danoeh.antennapod.ui.screen.episode.ItemPagerFragment;
 
 /**
@@ -57,6 +58,9 @@ public class EpisodeItemListAdapter extends SelectableAdapter<EpisodeItemViewHol
 
     @Override
     public final int getItemViewType(int position) {
+        if (UserPreferences.shouldShowEpisodePreview()) {
+            return R.id.view_type_episode_item_preview;
+        }
         return R.id.view_type_episode_item;
     }
 

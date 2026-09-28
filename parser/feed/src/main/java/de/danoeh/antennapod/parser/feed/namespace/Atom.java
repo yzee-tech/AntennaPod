@@ -199,9 +199,11 @@ public class Atom extends Namespace {
             } else if (CONTENT.equals(top) && ENTRY.equals(second) && textElement != null
                     && state.getCurrentItem() != null) {
                 state.getCurrentItem().setDescriptionIfLonger(textElement.getProcessedContent());
+                state.getCurrentItem().setPreviewTextIfShorter(textElement.getProcessedContent());
             } else if (SUMMARY.equals(top) && ENTRY.equals(second) && textElement != null
                     && state.getCurrentItem() != null) {
                 state.getCurrentItem().setDescriptionIfLonger(textElement.getProcessedContent());
+                state.getCurrentItem().setPreviewTextIfShorter(textElement.getProcessedContent());
             } else if (UPDATED.equals(top) && ENTRY.equals(second) && state.getCurrentItem() != null
                     && state.getCurrentItem().getPubDate() == null) {
                 state.getCurrentItem().setPubDate(DateUtils.parseOrNullIfFuture(content));

@@ -31,6 +31,7 @@ public class FeedItemCursor extends CursorWrapper {
     private final int indexPodcastIndexTranscriptUrl;
     private final int indexIsFavorite;
     private final int indexIsInQueue;
+    private final int indexPreviewText;
 
     public FeedItemCursor(Cursor cursor) {
         super(new FeedMediaCursor(cursor));
@@ -53,6 +54,7 @@ public class FeedItemCursor extends CursorWrapper {
         indexPodcastIndexTranscriptUrl = cursor.getColumnIndexOrThrow(PodDBAdapter.KEY_PODCASTINDEX_TRANSCRIPT_URL);
         indexIsFavorite = cursor.getColumnIndexOrThrow(PodDBAdapter.SELECT_KEY_IS_FAVORITE);
         indexIsInQueue = cursor.getColumnIndexOrThrow(PodDBAdapter.SELECT_KEY_IS_IN_QUEUE);
+        indexPreviewText = cursor.getColumnIndexOrThrow(PodDBAdapter.KEY_PREVIEW_TEXT);
     }
 
     /**
@@ -76,6 +78,7 @@ public class FeedItemCursor extends CursorWrapper {
                 getString(indexPodcastIndexTranscriptType),
                 getString(indexPodcastIndexTranscriptUrl),
                 getString(indexSocialInteractUrl));
+        item.setPreviewText(getString(indexPreviewText));
         if (!isNull(indexMediaId)) {
             item.setMedia(feedMediaCursor.getFeedMedia());
         }
