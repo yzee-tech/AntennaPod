@@ -240,9 +240,13 @@ public class FeedItem implements Serializable {
         if (StringUtils.isBlank(newPreviewText)) {
             return;
         }
-        if (previewText == null || newPreviewText.length() < previewText.length()) {
-            previewText = newPreviewText;
+        if (previewText != null && newPreviewText.length() >= previewText.length()) {
+            return;
         }
+        if (StringUtils.isBlank(newPreviewText.replaceAll("<[^>]*>|&nbsp;", ""))) {
+            return;
+        }
+        previewText = newPreviewText;
     }
 
     public String getLink() {
