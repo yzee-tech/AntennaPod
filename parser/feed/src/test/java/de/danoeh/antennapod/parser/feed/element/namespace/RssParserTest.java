@@ -113,6 +113,14 @@ public class RssParserTest {
     }
 
     @Test
+    public void testPreviewText() throws Exception {
+        File feedFile = FeedParserTestHelper.getFeedFile("feed-rss-testPreviewText.xml");
+        Feed feed = FeedParserTestHelper.runFeedParser(feedFile);
+        assertEquals("Short summary", feed.getItems().get(0).getPreviewText());
+        assertEquals("Hello & world", feed.getItems().get(1).getPreviewText());
+    }
+
+    @Test
     public void testUnsupportedElements() throws Exception {
         File feedFile = FeedParserTestHelper.getFeedFile("feed-rss-testUnsupportedElements.xml");
         Feed feed = FeedParserTestHelper.runFeedParser(feedFile);
