@@ -12,5 +12,10 @@
             <title>item-1</title>
             <content:encoded><![CDATA[<p>Hello &amp; <b>world</b></p>]]></content:encoded>
         </item>
+        <item>
+            <title>item-2</title>
+            <description><![CDATA[<p>&nbsp;</p>]]></description>
+            <content:encoded><![CDATA[<p>Real show notes</p>]]></content:encoded>
+        </item>
     </channel>
 </rss>
