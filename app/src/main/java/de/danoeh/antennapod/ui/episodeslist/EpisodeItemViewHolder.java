@@ -66,8 +66,8 @@ public class EpisodeItemViewHolder extends RecyclerView.ViewHolder {
     private final Activity activity;
     private FeedItem item;
 
-    public EpisodeItemViewHolder(Activity activity, ViewGroup parent) {
-        super(LayoutInflater.from(activity).inflate(UserPreferences.shouldShowEpisodePreview()
+    public EpisodeItemViewHolder(Activity activity, ViewGroup parent, int viewType) {
+        super(LayoutInflater.from(activity).inflate(viewType == R.id.view_type_episode_item_preview
                 ? R.layout.feeditemlist_item_preview : R.layout.feeditemlist_item, parent, false));
         this.activity = activity;
         container = itemView.findViewById(R.id.container);
