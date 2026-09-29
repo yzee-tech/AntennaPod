@@ -49,6 +49,7 @@ public class UserInterfacePreferencesFragment extends AnimatedPreferenceFragment
         findPreference(UserPreferences.PREF_THEME).setOnPreferenceChangeListener(restartApp);
         findPreference(UserPreferences.PREF_THEME_BLACK).setOnPreferenceChangeListener(restartApp);
         findPreference(UserPreferences.PREF_TINTED_COLORS).setOnPreferenceChangeListener(restartApp);
+        findPreference(UserPreferences.PREF_EPISODE_PREVIEW).setOnPreferenceChangeListener(restartApp);
         if (Build.VERSION.SDK_INT < 31) {
             findPreference(UserPreferences.PREF_TINTED_COLORS).setVisible(false);
         }

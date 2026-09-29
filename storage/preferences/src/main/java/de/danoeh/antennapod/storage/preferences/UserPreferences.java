@@ -54,6 +54,7 @@ public abstract class UserPreferences {
     public static final String PREF_EXPANDED_NOTIFICATION = "prefExpandNotify";
     public static final String PREF_USE_EPISODE_COVER = "prefEpisodeCover";
     public static final String PREF_SHOW_TIME_LEFT = "showTimeLeft";
+    public static final String PREF_EPISODE_PREVIEW = "prefEpisodePreview";
     public static final String PREF_PERSISTENT_NOTIFICATION = "prefPersistNotify";
     public static final String PREF_FULL_NOTIFICATION_BUTTONS = "prefFullNotificationButtons";
     private static final String PREF_SHOW_DOWNLOAD_REPORT = "prefShowDownloadReport";
@@ -318,6 +319,10 @@ public abstract class UserPreferences {
      */
     public static boolean shouldShowRemainingTime() {
         return prefs.getBoolean(PREF_SHOW_TIME_LEFT, false);
+    }
+
+    public static boolean shouldShowEpisodePreview() {
+        return prefs.getBoolean(PREF_EPISODE_PREVIEW, false);
     }
 
     /**
