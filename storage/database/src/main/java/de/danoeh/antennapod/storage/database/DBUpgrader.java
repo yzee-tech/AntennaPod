@@ -358,6 +358,8 @@ class DBUpgrader {
         if (oldVersion < 3130000) {
             db.execSQL("ALTER TABLE " + PodDBAdapter.TABLE_NAME_FEED_ITEMS
                     + " ADD COLUMN " + PodDBAdapter.KEY_PREVIEW_TEXT + " TEXT");
+            db.execSQL("UPDATE " + PodDBAdapter.TABLE_NAME_FEEDS
+                    + " SET " + PodDBAdapter.KEY_LASTUPDATE + " = NULL");
         }
     }
 

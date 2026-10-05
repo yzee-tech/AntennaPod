@@ -32,9 +32,11 @@ import de.danoeh.antennapod.net.common.NetworkUtils;
 import de.danoeh.antennapod.model.download.DownloadError;
 import de.danoeh.antennapod.model.download.DownloadResult;
 import de.danoeh.antennapod.model.feed.Feed;
+import de.danoeh.antennapod.model.feed.FeedItem;
 import de.danoeh.antennapod.model.download.DownloadRequest;
 
 import de.danoeh.antennapod.net.download.serviceinterface.DownloadRequestBuilder;
+import de.danoeh.antennapod.parser.feed.FeedHandler;
 import de.danoeh.antennapod.parser.feed.FeedHandlerResult;
 import de.danoeh.antennapod.storage.database.NonSubscribedFeedsCleaner;
 import de.danoeh.antennapod.storage.preferences.UserPreferences;
@@ -239,6 +241,20 @@ public class FeedUpdateWorker extends Worker {
         }
         feedHandlerResult.feed.setLastRefreshAttempt(System.currentTimeMillis());
         Feed savedFeed = FeedDatabaseWriter.updateFeed(getApplicationContext(), feedHandlerResult.feed, false);
+        if (savedFeed != null && savedFeed.getItems() != null) {
+            List<FeedItem> itemsWithoutPreview = new ArrayList<>();
+            for (FeedItem item : savedFeed.getItems()) {
+                if (item.getPreviewText() == null) {
+                    DBReader.loadDescriptionOfFeedItem(item);
+                    String previewText = FeedHandler.createPreviewText(item.getDescription());
+                    item.setPreviewText(previewText == null ? "" : previewText);
+                    itemsWithoutPreview.add(item);
+                }
+            }
+            if (!itemsWithoutPreview.isEmpty()) {
+                DBWriter.setItemList(itemsWithoutPreview).get();
+            }
+        }
 
         if (request.getFeedfileId() == 0) {
             return savedFeed; // No download logs for new subscriptions
