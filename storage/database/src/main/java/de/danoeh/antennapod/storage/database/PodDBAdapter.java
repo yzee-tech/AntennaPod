@@ -55,7 +55,7 @@ public class PodDBAdapter {
 
     private static final String TAG = "PodDBAdapter";
     public static final String DATABASE_NAME = "Antennapod.db";
-    public static final int VERSION = 3110000;
+    public static final int VERSION = 3130001;
 
     /**
      * Maximum number of arguments for IN-operator.
@@ -128,6 +128,7 @@ public class PodDBAdapter {
     public static final String KEY_STATE = "state";
     public static final String KEY_PODCASTINDEX_TRANSCRIPT_URL = "podcastindex_transcript_url";
     public static final String KEY_PODCASTINDEX_TRANSCRIPT_TYPE = "podcastindex_transcript_type";
+    public static final String KEY_PREVIEW_TEXT = "preview_text";
 
     // Table names
     public static final String TABLE_NAME_FEEDS = "Feeds";
@@ -193,7 +194,8 @@ public class PodDBAdapter {
             + KEY_PODCASTINDEX_CHAPTER_URL + " TEXT,"
             + KEY_PODCASTINDEX_TRANSCRIPT_TYPE + " TEXT,"
             + KEY_PODCASTINDEX_TRANSCRIPT_URL + " TEXT,"
-            + KEY_SOCIAL_INTERACT_URL + " TEXT)";
+            + KEY_SOCIAL_INTERACT_URL + " TEXT,"
+            + KEY_PREVIEW_TEXT + " TEXT)";
 
     private static final String CREATE_TABLE_FEED_MEDIA = "CREATE TABLE "
             + TABLE_NAME_FEED_MEDIA + " (" + TABLE_PRIMARY_KEY + KEY_DURATION
@@ -287,6 +289,7 @@ public class PodDBAdapter {
             + TABLE_NAME_FEED_ITEMS + "." + KEY_SOCIAL_INTERACT_URL + ", "
             + TABLE_NAME_FEED_ITEMS + "." + KEY_PODCASTINDEX_TRANSCRIPT_TYPE + ", "
             + TABLE_NAME_FEED_ITEMS + "." + KEY_PODCASTINDEX_TRANSCRIPT_URL + ", "
+            + TABLE_NAME_FEED_ITEMS + "." + KEY_PREVIEW_TEXT + ", "
             + TABLE_NAME_FEED_ITEMS + "." + KEY_ID + " IN (SELECT " + TABLE_NAME_FAVORITES + "." + KEY_FEEDITEM
             + " FROM " + TABLE_NAME_FAVORITES + ") AS " + SELECT_KEY_IS_FAVORITE + ", "
             + TABLE_NAME_FEED_ITEMS + "." + KEY_ID + " IN (SELECT " + TABLE_NAME_QUEUE + "." + KEY_FEEDITEM
@@ -705,6 +708,9 @@ public class PodDBAdapter {
         values.put(KEY_LINK, item.getLink());
         if (item.getDescription() != null) {
             values.put(KEY_DESCRIPTION, item.getDescription());
+        }
+        if (item.getPreviewText() != null) {
+            values.put(KEY_PREVIEW_TEXT, item.getPreviewText());
         }
         values.put(KEY_PUBDATE, item.getPubDate().getTime());
         values.put(KEY_PAYMENT_LINK, item.getPaymentLink());
