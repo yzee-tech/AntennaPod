@@ -91,6 +91,18 @@ jobs:
         run: |
           keytool -noprompt -genkey -v -keystore "app/keystore" -alias alias -storepass password -keypass password -keyalg RSA -validity 10 -dname "CN=antennapod.org, OU=dummy, O=dummy, L=dummy, S=dummy, C=US"
           cp app/keystore app-wearos/keystore
+      - name: Restore personal debug keystore
+        if: matrix.upload-artifact == true
+        env:
+          DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$DEBUG_KEYSTORE_BASE64" ]; then
+            echo "Secret DEBUG_KEYSTORE_BASE64 is missing"
+            exit 1
+          fi
+          mkdir -p ~/.android
+          echo "$DEBUG_KEYSTORE_BASE64" | base64 -d > ~/.android/debug.keystore
+          keytool -list -v -keystore ~/.android/debug.keystore -storepass android | grep "SHA256: C9:31:19:3D:7D:7B:BE:E3:80:AB:61:6A:A7:68:C8:12:56:BD:AE:FC:C5:44:19:FB:91:B3:8D:2A:F8:3A:93:13"
       - name: Build
         run: ./gradlew assemble${{ matrix.variant }}
       - name: Test
