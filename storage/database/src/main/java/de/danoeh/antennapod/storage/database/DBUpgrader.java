@@ -361,6 +361,10 @@ class DBUpgrader {
             db.execSQL("UPDATE " + PodDBAdapter.TABLE_NAME_FEEDS
                     + " SET " + PodDBAdapter.KEY_LASTUPDATE + " = NULL");
         }
+        if (oldVersion < 3130001) {
+            db.execSQL("UPDATE " + PodDBAdapter.TABLE_NAME_FEEDS
+                    + " SET " + PodDBAdapter.KEY_LASTUPDATE + " = NULL");
+        }
     }
 
 }
