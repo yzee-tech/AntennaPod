@@ -38,13 +38,17 @@ public class FeedHandler {
         inputStreamReader.close();
         if (handler.state.feed.getItems() != null) {
             for (FeedItem item : handler.state.feed.getItems()) {
-                if (item.getPreviewText() != null) {
-                    String previewText = Jsoup.parse(item.getPreviewText()).text();
-                    item.setPreviewText(StringUtils.isBlank(previewText)
-                            ? null : StringUtils.left(previewText, PREVIEW_TEXT_LENGTH));
-                }
+                item.setPreviewText(createPreviewText(item.getPreviewText()));
             }
         }
         return new FeedHandlerResult(handler.state.feed, handler.state.alternateUrls, handler.state.redirectUrl);
+    }
+
+    public static String createPreviewText(String description) {
+        if (description == null) {
+            return null;
+        }
+        String previewText = Jsoup.parse(description).text();
+        return StringUtils.isBlank(previewText) ? null : StringUtils.left(previewText, PREVIEW_TEXT_LENGTH);
     }
 }
