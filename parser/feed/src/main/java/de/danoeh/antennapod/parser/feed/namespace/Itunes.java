@@ -67,6 +67,9 @@ public class Itunes extends Namespace {
                 Log.e(NSTAG, String.format("Duration '%s' could not be parsed", content));
             }
         } else if (SUBTITLE.equals(localName)) {
+            if (state.getCurrentItem() != null) {
+                state.getCurrentItem().setPreviewTextIfShorter(content);
+            }
             if (state.getCurrentItem() != null && TextUtils.isEmpty(state.getCurrentItem().getDescription())) {
                 state.getCurrentItem().setDescriptionIfLonger(content);
             } else if (state.getFeed() != null && TextUtils.isEmpty(state.getFeed().getDescription())) {
@@ -75,6 +78,7 @@ public class Itunes extends Namespace {
         } else if (SUMMARY.equals(localName)) {
             if (state.getCurrentItem() != null) {
                 state.getCurrentItem().setDescriptionIfLonger(content);
+                state.getCurrentItem().setPreviewTextIfShorter(content);
             } else if (Rss20.CHANNEL.equals(state.getSecondTag().getName()) && state.getFeed() != null) {
                 state.getFeed().setDescription(content);
             }
