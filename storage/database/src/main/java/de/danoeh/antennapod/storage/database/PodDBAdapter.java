@@ -55,7 +55,7 @@ public class PodDBAdapter {
 
     private static final String TAG = "PodDBAdapter";
     public static final String DATABASE_NAME = "Antennapod.db";
-    public static final int VERSION = 3130000;
+    public static final int VERSION = 3130001;
 
     /**
      * Maximum number of arguments for IN-operator.
