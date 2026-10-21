@@ -46,6 +46,9 @@ INSERT INTO Feeds (id, title, download_url, downloaded) VALUES (900, 'Test Feed'
 INSERT INTO FeedItems (id, title, feed, item_identifier, pubDate, read) VALUES (900, 'Episode 1', 900, 'ep1', 1700000000000, 0);
 INSERT INTO FeedMedia (id, file_url, download_url, downloaded, filesize, mime_type, feeditem, duration, position)
   VALUES (900, '$OLDPATH', 'http://example.com/ep1.mp3', 1700000000000, 3000000, 'audio/mpeg', 900, 60000, 12345);
+INSERT INTO FeedItems (id, title, feed, item_identifier, pubDate, read) VALUES (901, 'Episode 2', 900, 'ep2', 1700000000000, 0);
+INSERT INTO FeedMedia (id, file_url, download_url, downloaded, filesize, mime_type, feeditem, duration, position)
+  VALUES (901, '/storage/emulated/0/Android/data/$OLD/files/media/Test Feed/missing.mp3', 'http://example.com/ep2.mp3', 1700000000000, 3000000, 'audio/mpeg', 901, 60000, 0);
 EOF
 result "old db version $(sqlite3 olddb/Antennapod.db 'PRAGMA user_version;')"
 adb push olddb/Antennapod.db /data/local/tmp/seed.db
@@ -82,6 +85,9 @@ pull_db $NEW newdb
 check [ "$(sqlite3 newdb/Antennapod.db 'PRAGMA user_version;')" = "3130002" ]
 check [ "$(sqlite3 newdb/Antennapod.db 'SELECT file_url FROM FeedMedia WHERE id = 900;')" = "$NEWPATH" ]
 check [ "$(sqlite3 newdb/Antennapod.db 'SELECT position FROM FeedMedia WHERE id = 900;')" = "12345" ]
+check [ "$(sqlite3 newdb/Antennapod.db 'SELECT downloaded > 0 FROM FeedMedia WHERE id = 900;')" = "1" ]
+check [ "$(sqlite3 newdb/Antennapod.db 'SELECT downloaded FROM FeedMedia WHERE id = 901;')" = "0" ]
+check [ "$(sqlite3 newdb/Antennapod.db 'SELECT file_url IS NULL FROM FeedMedia WHERE id = 901;')" = "1" ]
 check [ "$(sqlite3 newdb/Antennapod.db "SELECT COUNT(*) FROM FeedMedia WHERE file_url LIKE '%antennapod.debug%';")" = "0" ]
 check adb shell "run-as $NEW grep -q prefMigrationMarker shared_prefs/${NEW}_preferences.xml"
 check [ "$OLD_MEDIA_MD5" = "$(adb shell "md5sum '$NEXT/$MEDIA'" | cut -d' ' -f1)" ]
