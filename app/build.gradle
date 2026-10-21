@@ -37,8 +37,8 @@ android {
 
     buildTypes {
         debug {
-            applicationIdSuffix ".debug"
-            resValue "string", "provider_authority", "de.danoeh.antennapod.debug.provider"
+            applicationIdSuffix ".personal"
+            resValue "string", "provider_authority", "de.danoeh.antennapod.personal.provider"
         }
         release {
             resValue "string", "provider_authority", "de.danoeh.antennapod.provider"

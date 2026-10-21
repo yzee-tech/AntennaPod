@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euxo pipefail
-PKG=de.danoeh.antennapod.debug
+PKG=de.danoeh.antennapod.personal
 adb install old/app-play-debug.apk
 adb shell "run-as $PKG sh -c 'mkdir -p files && echo kept-across-upgrade > files/upgrade-marker'"
 adb shell "run-as $PKG cat files/upgrade-marker"

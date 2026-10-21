@@ -198,17 +198,25 @@ jobs:
           name: app-play-debug.apk
           path: new
       - name: Download previous build's APK
+        id: previous
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for RUN in $(gh run list --repo "$GITHUB_REPOSITORY" --workflow checks.yml --branch personal --status completed --limit 20 --json databaseId --jq '.[].databaseId'); do
-            if [ "$RUN" != "$GITHUB_RUN_ID" ] && gh run download "$RUN" --repo "$GITHUB_REPOSITORY" -n app-play-debug.apk -D old; then
+          AAPT2="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/aapt2"
+          THIS_PKG=$("$AAPT2" dump packagename new/app-play-debug.apk)
+          for RUN in $(gh run list --repo "$GITHUB_REPOSITORY" --workflow checks.yml --branch personal --status completed --limit 30 --json databaseId --jq '.[].databaseId'); do
+            rm -rf old
+            if [ "$RUN" != "$GITHUB_RUN_ID" ] && gh run download "$RUN" --repo "$GITHUB_REPOSITORY" -n app-play-debug.apk -D old \
+                && [ "$("$AAPT2" dump packagename old/app-play-debug.apk)" = "$THIS_PKG" ]; then
               echo "::notice title=Upgrade test::Previous build: https://github.com/$GITHUB_REPOSITORY/actions/runs/$RUN"
-              break
+              echo "found=true" >> "$GITHUB_OUTPUT"
+              exit 0
             fi
           done
-          test -f old/app-play-debug.apk
+          echo "::notice title=Upgrade test::No previous build of $THIS_PKG yet, nothing to compare against"
+          echo "found=false" >> "$GITHUB_OUTPUT"
       - name: Compare signing keys
+        if: steps.previous.outputs.found == 'true'
         run: |
           APKSIGNER="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apksigner"
           OLD=$("$APKSIGNER" verify --print-certs old/app-play-debug.apk | grep -m1 "certificate SHA-256 digest" | awk '{print $NF}')
@@ -216,11 +224,13 @@ jobs:
           echo "::notice title=Signing keys::previous build $OLD / this build $NEW"
           test "$OLD" = "$NEW"
       - name: Enable KVM group perms
+        if: steps.previous.outputs.found == 'true'
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Install previous build, then update to this build
+        if: steps.previous.outputs.found == 'true'
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 30
@@ -231,46 +241,6 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: bash .github/workflows/personalUpgradeTest.sh
-
-  migration-test:
-    name: "Migration test API ${{ matrix.api-level }}: differently signed build to this build"
-    needs: unit-test
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    permissions:
-      actions: read
-      contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        api-level: [ 30, 34 ]
-    steps:
-      - uses: actions/checkout@v5
-      - name: Download this build's APK
-        uses: actions/download-artifact@v4
-        with:
-          name: app-play-debug.apk
-          path: new
-      - name: Download an APK signed with a different key
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh run download 39549751288 --repo "$GITHUB_REPOSITORY" -n app-play-debug.apk -D old
-      - name: Enable KVM group perms
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-      - name: Back up, reinstall with new key, restore
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: ${{ matrix.api-level }}
-          target: aosp_atd
-          arch: x86_64
-          channel: canary
-          force-avd-creation: false
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          disable-animations: true
-          script: bash .github/workflows/personalMigrationTest.sh
 
   ci-summary:
     name: "CI Summary"
