@@ -38,7 +38,9 @@ result "Android $(adb shell getprop ro.build.version.release | tr -d '\r') API $
 mkdir -p server
 head -c 400000 /dev/urandom > server/ep1.mp3
 head -c 500000 /dev/urandom > server/ep2.mp3
-(cd server && python3 -m http.server 8000 > ../server.log 2>&1) &
+python3 -m http.server 8000 --directory server > server.log 2>&1 < /dev/null &
+SERVER_PID=$!
+trap 'kill $SERVER_PID' EXIT
 sleep 2
 
 check adb install old/app-play-debug.apk
