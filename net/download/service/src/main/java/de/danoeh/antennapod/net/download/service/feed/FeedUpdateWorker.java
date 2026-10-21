@@ -242,17 +242,21 @@ public class FeedUpdateWorker extends Worker {
         feedHandlerResult.feed.setLastRefreshAttempt(System.currentTimeMillis());
         Feed savedFeed = FeedDatabaseWriter.updateFeed(getApplicationContext(), feedHandlerResult.feed, false);
         if (savedFeed != null && savedFeed.getItems() != null) {
-            List<FeedItem> itemsWithoutPreview = new ArrayList<>();
-            for (FeedItem item : savedFeed.getItems()) {
-                if (item.getPreviewText() == null) {
-                    DBReader.loadDescriptionOfFeedItem(item);
-                    String previewText = FeedHandler.createPreviewText(item.getDescription());
-                    item.setPreviewText(previewText == null ? "" : previewText);
-                    itemsWithoutPreview.add(item);
+            try {
+                List<FeedItem> itemsWithoutPreview = new ArrayList<>();
+                for (FeedItem item : savedFeed.getItems()) {
+                    if (item.getPreviewText() == null) {
+                        DBReader.loadDescriptionOfFeedItem(item);
+                        String previewText = FeedHandler.createPreviewText(item.getDescription());
+                        item.setPreviewText(previewText == null ? "" : previewText);
+                        itemsWithoutPreview.add(item);
+                    }
                 }
-            }
-            if (!itemsWithoutPreview.isEmpty()) {
-                DBWriter.setItemList(itemsWithoutPreview).get();
+                if (!itemsWithoutPreview.isEmpty()) {
+                    DBWriter.setItemList(itemsWithoutPreview).get();
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Could not create episode previews", e);
             }
         }
 

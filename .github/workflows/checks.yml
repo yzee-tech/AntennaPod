@@ -219,17 +219,32 @@ jobs:
         run: |
           AAPT2="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/aapt2"
           THIS_PKG=$("$AAPT2" dump packagename new/app-play-debug.apk)
-          for RUN in $(gh run list --repo "$GITHUB_REPOSITORY" --workflow checks.yml --branch personal --limit 30 --json databaseId --jq '.[].databaseId'); do
-            rm -rf old
-            if [ "$RUN" != "$GITHUB_RUN_ID" ] && gh run download "$RUN" --repo "$GITHUB_REPOSITORY" -n app-play-debug.apk -D old \
-                && [ "$("$AAPT2" dump packagename old/app-play-debug.apk)" = "$THIS_PKG" ]; then
-              echo "::notice title=Upgrade test::Previous build: https://github.com/$GITHUB_REPOSITORY/actions/runs/$RUN"
-              echo "found=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-          done
-          echo "::notice title=Upgrade test::No previous build of $THIS_PKG yet, nothing to compare against"
-          echo "found=false" >> "$GITHUB_OUTPUT"
+          rm -rf old release
+          if gh release download --repo "$GITHUB_REPOSITORY" --pattern '*.apk' -D release 2>/dev/null; then
+            mkdir -p old
+            mv release/*.apk old/app-play-debug.apk
+            TAG=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+            echo "::notice title=Upgrade test::Previous build: latest release $TAG"
+          else
+            for RUN in $(gh run list --repo "$GITHUB_REPOSITORY" --workflow checks.yml --branch personal --limit 30 --json databaseId --jq '.[].databaseId'); do
+              rm -rf old
+              if [ "$RUN" != "$GITHUB_RUN_ID" ] && gh run download "$RUN" --repo "$GITHUB_REPOSITORY" -n app-play-debug.apk -D old; then
+                echo "::notice title=Upgrade test::No release yet, previous build: https://github.com/$GITHUB_REPOSITORY/actions/runs/$RUN"
+                break
+              fi
+              rm -rf old
+            done
+          fi
+          if [ ! -f old/app-play-debug.apk ]; then
+            echo "::error title=Upgrade test::No previous build found to upgrade from"
+            exit 1
+          fi
+          OLD_PKG=$("$AAPT2" dump packagename old/app-play-debug.apk)
+          if [ "$OLD_PKG" != "$THIS_PKG" ]; then
+            echo "::error title=Upgrade test::Previous build is $OLD_PKG, this build is $THIS_PKG"
+            exit 1
+          fi
+          echo "found=true" >> "$GITHUB_OUTPUT"
       - name: Compare signing keys
         if: steps.previous.outputs.found == 'true'
         run: |
@@ -308,8 +323,39 @@ jobs:
     name: "CI Summary"
     needs:
       - wrapper-validation
+      - static-analysis
       - emulator-test
       - unit-test
+      - upgrade-test
+      - import-test
     runs-on: ubuntu-latest
     steps:
       - run: echo "All checks passed"
+
+  publish-release:
+    name: "Publish personal build as a release"
+    needs: ci-summary
+    if: github.repository == 'yzee-tech/AntennaPod' && github.event_name == 'pull_request' && github.head_ref == 'personal'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download this build's APK
+        uses: actions/download-artifact@v4
+        with:
+          name: app-play-debug.apk
+          path: new
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          AAPT2="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/aapt2"
+          VERSION=$("$AAPT2" dump badging new/app-play-debug.apk | sed -n "s/.*versionName='\([^']*\)'.*/\1/p")
+          TAG="personal-$VERSION-${HEAD_SHA:0:7}"
+          cp new/app-play-debug.apk "AntennaPod-Personal-$VERSION-${HEAD_SHA:0:7}.apk"
+          gh release create "$TAG" "AntennaPod-Personal-$VERSION-${HEAD_SHA:0:7}.apk" \
+              --repo "$GITHUB_REPOSITORY" --target "$HEAD_SHA" --latest \
+              --title "AntennaPod Personal $VERSION (${HEAD_SHA:0:7})" \
+              --notes "Personal build of AntennaPod $VERSION with episode previews. Signed with the permanent personal key, so it installs as an update over earlier AntennaPod Personal builds. All checks passed: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          echo "::notice title=Release::https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG"
