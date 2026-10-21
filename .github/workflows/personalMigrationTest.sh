@@ -55,7 +55,14 @@ adb push olddb/Antennapod.db /data/local/tmp/seed.db
 adb shell "run-as $OLD rm -f databases/Antennapod.db-wal databases/Antennapod.db-shm"
 adb shell "cat /data/local/tmp/seed.db | run-as $OLD sh -c 'cat > databases/Antennapod.db'"
 adb shell rm /data/local/tmp/seed.db
-adb shell "run-as $OLD sed -i 's#</map>#<string name=\"prefMigrationMarker\">kept</string></map>#' shared_prefs/${OLD}_preferences.xml"
+result "old app settings files: $(adb shell "run-as $OLD ls shared_prefs" | tr -d '\r' | tr '\n' ' ')"
+adb exec-out "run-as $OLD cat shared_prefs/${OLD}_preferences.xml" > oldprefs.xml || true
+grep -q "</map>" oldprefs.xml || printf "<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<map>\n</map>\n" > oldprefs.xml
+sed -i 's#</map>#    <string name="prefMigrationMarker">kept</string>\n</map>#' oldprefs.xml
+adb push oldprefs.xml /data/local/tmp/oldprefs.xml
+adb shell "run-as $OLD mkdir -p shared_prefs"
+adb shell "cat /data/local/tmp/oldprefs.xml | run-as $OLD sh -c 'cat > shared_prefs/${OLD}_preferences.xml'"
+adb shell rm /data/local/tmp/oldprefs.xml
 check adb shell "run-as $OLD grep -q prefMigrationMarker shared_prefs/${OLD}_preferences.xml"
 adb shell "mkdir -p '$OEXT/media/Test Feed' && head -c 3000000 /dev/urandom > '$OEXT/$MEDIA'"
 adb shell "ls -lnZ $OEXT $OEXT/media '$OEXT/media/Test Feed'"
