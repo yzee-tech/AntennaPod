@@ -103,8 +103,20 @@ jobs:
           mkdir -p ~/.android
           echo "$DEBUG_KEYSTORE_BASE64" | base64 -d > ~/.android/debug.keystore
           keytool -list -v -keystore ~/.android/debug.keystore -storepass android | grep "SHA256: C9:31:19:3D:7D:7B:BE:E3:80:AB:61:6A:A7:68:C8:12:56:BD:AE:FC:C5:44:19:FB:91:B3:8D:2A:F8:3A:93:13"
+          cp ~/.android/debug.keystore "$RUNNER_TEMP/personal-debug.keystore"
+          echo "PERSONAL_DEBUG_KEYSTORE=$RUNNER_TEMP/personal-debug.keystore" >> "$GITHUB_ENV"
       - name: Build
         run: ./gradlew assemble${{ matrix.variant }}
+      - name: Verify APK signing key
+        if: matrix.upload-artifact == true
+        run: |
+          APKSIGNER="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apksigner"
+          DIGEST=$("$APKSIGNER" verify --print-certs app/build/outputs/apk/play/debug/app-play-debug.apk | grep -m1 "certificate SHA-256 digest" | awk '{print $NF}')
+          echo "::notice title=APK signing key::SHA-256 $DIGEST"
+          if [ "$DIGEST" != "c931193d7d7bbee380ab616aa768c81256bdaefcc54419fb91b38d2af83a9313" ]; then
+            echo "::error title=APK signing key::APK is not signed with the permanent personal key"
+            exit 1
+          fi
       - name: Test
         if: matrix.execute-tests == true
         run: ./gradlew test${{ matrix.variant }}UnitTest test${{ matrix.base-variant }}UnitTest
