@@ -6,6 +6,7 @@ import android.util.Log;
 
 import org.greenrobot.eventbus.EventBus;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -31,9 +32,6 @@ public class MissingDownloadsChecker {
     }
 
     private static void check(Context context) {
-        if (!Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
-            return;
-        }
         List<FeedItem> items = DBReader.getEpisodes(0, Integer.MAX_VALUE,
                 new FeedItemFilter(FeedItemFilter.DOWNLOADED), SortOrder.DATE_NEW_OLD);
         List<FeedItem> missing = new ArrayList<>();
@@ -41,6 +39,10 @@ public class MissingDownloadsChecker {
             FeedMedia media = item.getMedia();
             if (media == null || media.getLocalFileUrl() == null || item.getFeed() == null
                     || item.getFeed().isLocalFeed() || media.fileExists()) {
+                continue;
+            }
+            if (!Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState(
+                    new File(media.getLocalFileUrl())))) {
                 continue;
             }
             media.setDownloaded(false, 0);

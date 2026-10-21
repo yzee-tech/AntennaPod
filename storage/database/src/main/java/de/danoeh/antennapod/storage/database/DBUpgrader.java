@@ -372,6 +372,22 @@ class DBUpgrader {
                         + "'/de.danoeh.antennapod.personal/')");
             }
         }
+        if (!hasColumn(db, PodDBAdapter.TABLE_NAME_FEED_ITEMS, PodDBAdapter.KEY_PREVIEW_TEXT)) {
+            db.execSQL("ALTER TABLE " + PodDBAdapter.TABLE_NAME_FEED_ITEMS
+                    + " ADD COLUMN " + PodDBAdapter.KEY_PREVIEW_TEXT + " TEXT");
+        }
+    }
+
+    private static boolean hasColumn(SQLiteDatabase db, String table, String column) {
+        try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + table + ")", null)) {
+            int nameIndex = cursor.getColumnIndexOrThrow("name");
+            while (cursor.moveToNext()) {
+                if (column.equals(cursor.getString(nameIndex))) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
 }

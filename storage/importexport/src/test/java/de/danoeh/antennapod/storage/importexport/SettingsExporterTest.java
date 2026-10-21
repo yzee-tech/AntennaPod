@@ -5,17 +5,20 @@ import android.content.SharedPreferences;
 
 import androidx.test.core.app.ApplicationProvider;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.HashSet;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @RunWith(RobolectricTestRunner.class)
 public class SettingsExporterTest {
@@ -34,7 +37,9 @@ public class SettingsExporterTest {
                 + "\"SwipeActionsPrefs\":{\"PrefSwipeActionsQueue\":"
                 + "{\"type\":\"string\",\"value\":\"REMOVE_FROM_QUEUE,START_DOWNLOAD\"}},"
                 + "\"gpodder.net\":{\"de.danoeh.antennapod.preferences.gpoddernet.password\":"
-                + "{\"type\":\"string\",\"value\":\"secret\"}}}}";
+                + "{\"type\":\"string\",\"value\":\"secret\"}},"
+                + "\"androidx.work.util.preferences\":{\"reschedule_needed\":"
+                + "{\"type\":\"boolean\",\"value\":true}}}}";
 
         SettingsExporter.applyImport(context, new JSONObject(json));
 
@@ -51,6 +56,8 @@ public class SettingsExporterTest {
                 Context.MODE_PRIVATE).getString("PrefSwipeActionsQueue", null));
         assertFalse(context.getSharedPreferences("gpodder.net", Context.MODE_PRIVATE)
                 .contains("de.danoeh.antennapod.preferences.gpoddernet.password"));
+        assertFalse(context.getSharedPreferences("androidx.work.util.preferences", Context.MODE_PRIVATE)
+                .contains("reschedule_needed"));
     }
 
     @Test
@@ -70,5 +77,35 @@ public class SettingsExporterTest {
         SharedPreferences prefs = context.getSharedPreferences(defaultName, Context.MODE_PRIVATE);
         assertTrue(prefs.getBoolean("prefEpisodePreview", false));
         assertEquals(1234567890123L, prefs.getLong("prefSomeLong", 0));
+    }
+
+    @Test
+    public void testImportRejectsUnsafeOrBrokenFiles() throws Exception {
+        Context context = ApplicationProvider.getApplicationContext();
+        SharedPreferences prefs = context.getSharedPreferences(
+                context.getPackageName() + "_preferences", Context.MODE_PRIVATE);
+        String broken = "{\"version\":1,\"preferences\":{\"default\":{"
+                + "\"prefTestApplied\":{\"type\":\"boolean\",\"value\":true},"
+                + "\"prefTestBroken\":{\"type\":\"unknown\",\"value\":1}}}}";
+        try {
+            SettingsExporter.applyImport(context, new JSONObject(broken));
+            fail("Broken file must not be imported");
+        } catch (JSONException e) {
+            assertFalse(prefs.contains("prefTestApplied"));
+        }
+
+        String unsafe = "{\"version\":1,\"preferences\":{"
+                + "\"../databases/x\":{\"a\":{\"type\":\"boolean\",\"value\":true}},"
+                + "\"default\":{\"prefProxyPassword\":{\"type\":\"string\",\"value\":\"secret\"}}}}";
+        SettingsExporter.applyImport(context, new JSONObject(unsafe));
+        assertFalse(prefs.contains("prefProxyPassword"));
+        assertFalse(new File(context.getApplicationInfo().dataDir, "databases/x.xml").exists());
+
+        try {
+            SettingsExporter.applyImport(context, new JSONObject("{\"version\":2,\"preferences\":{}}"));
+            fail("Newer format must not be imported");
+        } catch (JSONException e) {
+            assertTrue(e.getMessage().contains("newer"));
+        }
     }
 }

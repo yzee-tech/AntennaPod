@@ -20,6 +20,7 @@ import de.danoeh.antennapod.model.feed.FeedItem;
 
 public class FeedHandler {
     private static final int PREVIEW_TEXT_LENGTH = 200;
+    private static final int PREVIEW_SOURCE_LENGTH = 4000;
 
     public FeedHandlerResult parseFeed(Feed feed) throws SAXException, IOException,
             ParserConfigurationException, UnsupportedFeedtypeException {
@@ -48,7 +49,7 @@ public class FeedHandler {
         if (description == null) {
             return null;
         }
-        String previewText = Jsoup.parse(description).text();
+        String previewText = Jsoup.parse(StringUtils.left(description, PREVIEW_SOURCE_LENGTH)).text();
         return StringUtils.isBlank(previewText) ? null : StringUtils.left(previewText, PREVIEW_TEXT_LENGTH);
     }
 }

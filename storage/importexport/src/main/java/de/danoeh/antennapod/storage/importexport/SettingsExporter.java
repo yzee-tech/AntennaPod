@@ -15,9 +15,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -27,8 +29,9 @@ public class SettingsExporter {
     private static final String DEFAULT_PREFERENCES_SUFFIX = "_preferences";
     private static final Set<String> EXCLUDED_FILES = new HashSet<>(
             Arrays.asList("gpodder.net", "synchronization", "app_version"));
+    private static final String[] EXCLUDED_FILE_PREFIXES = {"androidx.", "com.google.", "WebView"};
     private static final Set<String> EXCLUDED_KEYS = new HashSet<>(
-            Arrays.asList("prefDataFolder", "prefAutomaticExportFolder"));
+            Arrays.asList("prefDataFolder", "prefAutomaticExportFolder", "prefProxyPassword"));
 
     private SettingsExporter() {
     }
@@ -65,7 +68,7 @@ public class SettingsExporter {
                     continue;
                 }
                 String name = fileName.substring(0, fileName.length() - 4);
-                if (EXCLUDED_FILES.contains(name)) {
+                if (isExcludedFile(name)) {
                     continue;
                 }
                 SharedPreferences prefs = context.getSharedPreferences(name, Context.MODE_PRIVATE);
@@ -80,7 +83,11 @@ public class SettingsExporter {
 
     @SuppressLint("ApplySharedPref")
     public static void applyImport(Context context, JSONObject root) throws JSONException {
+        if (root.optInt("version", 0) > FORMAT_VERSION) {
+            throw new JSONException("Settings file is from a newer version");
+        }
         JSONObject files = root.getJSONObject("preferences");
+        List<SharedPreferences.Editor> editors = new ArrayList<>();
         Iterator<String> names = files.keys();
         while (names.hasNext()) {
             String name = names.next();
@@ -88,10 +95,11 @@ public class SettingsExporter {
             if (name.equals(DEFAULT_PREFERENCES) || name.endsWith(DEFAULT_PREFERENCES_SUFFIX)) {
                 target = defaultName(context);
             }
-            if (EXCLUDED_FILES.contains(target)) {
+            if (isExcludedFile(target)) {
                 continue;
             }
             SharedPreferences.Editor editor = context.getSharedPreferences(target, Context.MODE_PRIVATE).edit();
+            editors.add(editor);
             JSONObject values = files.getJSONObject(name);
             Iterator<String> keys = values.keys();
             while (keys.hasNext()) {
@@ -125,9 +133,11 @@ public class SettingsExporter {
                         editor.putStringSet(key, set);
                         break;
                     default:
-                        break;
+                        throw new JSONException("Unknown type for " + key);
                 }
             }
+        }
+        for (SharedPreferences.Editor editor : editors) {
             editor.commit();
         }
     }
@@ -166,6 +176,18 @@ public class SettingsExporter {
             result.put(value.getKey(), entry);
         }
         return result;
+    }
+
+    private static boolean isExcludedFile(String name) {
+        if (EXCLUDED_FILES.contains(name) || !name.matches("[A-Za-z0-9._-]+") || name.startsWith(".")) {
+            return true;
+        }
+        for (String prefix : EXCLUDED_FILE_PREFIXES) {
+            if (name.startsWith(prefix)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static String defaultName(Context context) {

@@ -1,5 +1,5 @@
 #!/bin/bash
-set -uxo pipefail
+set -euxo pipefail
 OLD=de.danoeh.antennapod.debug
 NEW=de.danoeh.antennapod.personal
 OLDDIR="/storage/emulated/0/Android/data/$OLD/files/media/Test Feed"
