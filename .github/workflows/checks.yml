@@ -182,6 +182,56 @@ jobs:
           name: test-report
           path: app/build/reports/androidTests/
 
+  upgrade-test:
+    name: "Upgrade test: previous build to this build"
+    needs: unit-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download this build's APK
+        uses: actions/download-artifact@v4
+        with:
+          name: app-play-debug.apk
+          path: new
+      - name: Download previous build's APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for RUN in $(gh run list --repo "$GITHUB_REPOSITORY" --workflow checks.yml --branch personal --status completed --limit 20 --json databaseId --jq '.[].databaseId'); do
+            if [ "$RUN" != "$GITHUB_RUN_ID" ] && gh run download "$RUN" --repo "$GITHUB_REPOSITORY" -n app-play-debug.apk -D old; then
+              echo "::notice title=Upgrade test::Previous build: https://github.com/$GITHUB_REPOSITORY/actions/runs/$RUN"
+              break
+            fi
+          done
+          test -f old/app-play-debug.apk
+      - name: Compare signing keys
+        run: |
+          APKSIGNER="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apksigner"
+          OLD=$("$APKSIGNER" verify --print-certs old/app-play-debug.apk | grep -m1 "certificate SHA-256 digest" | awk '{print $NF}')
+          NEW=$("$APKSIGNER" verify --print-certs new/app-play-debug.apk | grep -m1 "certificate SHA-256 digest" | awk '{print $NF}')
+          echo "::notice title=Signing keys::previous build $OLD / this build $NEW"
+          test "$OLD" = "$NEW"
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Install previous build, then update to this build
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: aosp_atd
+          arch: x86_64
+          channel: canary
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: bash .github/workflows/personalUpgradeTest.sh
+
   ci-summary:
     name: "CI Summary"
     needs:
