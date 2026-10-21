@@ -179,8 +179,9 @@ jobs:
       - name: Report failed tests
         if: failure()
         run: |
-          for f in $(find app/build/outputs/androidTest-results -name '*.xml'); do
-            python3 -I - "$f" <<'EOF'
+          echo "::notice title=Test result files::$(find . -path '*androidTest-results*' -name '*.xml' | tr '\n' ' ')"
+          for f in $(find . -path '*androidTest-results*' -name '*.xml'); do
+            python3 -I - "$f" <<'EOF' || echo "::warning title=Could not read::$f"
           import sys, xml.etree.ElementTree as ET
           for case in ET.parse(sys.argv[1]).iter('testcase'):
               for problem in list(case.findall('failure')) + list(case.findall('error')):
@@ -255,8 +256,8 @@ jobs:
           disable-animations: true
           script: bash .github/workflows/personalUpgradeTest.sh
 
-  migration-test:
-    name: "Migration test API ${{ matrix.api-level }}: AntennaPod Debug to AntennaPod Personal"
+  import-test:
+    name: "Import test API ${{ matrix.api-level }}: AntennaPod Debug database into AntennaPod Personal"
     needs: unit-test
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -285,7 +286,7 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Migrate with the USB script
+      - name: Export database from old app, import into new app
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api-level }}
@@ -295,12 +296,11 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: bash .github/workflows/personalMigrationTest.sh
+          script: bash .github/workflows/personalImportTest.sh
       - name: Report results
         if: always()
         run: |
-          [ -f migration-results.txt ] && echo "::notice title=Migration test results::$(sed ':a;N;$!ba;s/\n/%0A/g' migration-results.txt)"
-          [ -f migrate-output.txt ] && echo "::notice title=Migration script output::$(tail -n 60 migrate-output.txt | tr -d '\r' | sed ':a;N;$!ba;s/\n/%0A/g')"
+          [ -f import-results.txt ] && echo "::notice title=Import test results::$(sed ':a;N;$!ba;s/\n/%0A/g' import-results.txt)"
           true
 
   ci-summary:
