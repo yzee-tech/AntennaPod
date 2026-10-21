@@ -179,14 +179,15 @@ jobs:
       - name: Report failed tests
         if: failure()
         run: |
-          echo "::notice title=Test result files::$(find . -path '*androidTest-results*' -name '*.xml' | tr '\n' ' ')"
-          for f in $(find . -path '*androidTest-results*' -name '*.xml'); do
+          find . -path '*androidTest-results*' -name '*.xml' -print0 | while IFS= read -r -d '' f; do
+            echo "::notice title=Test result file::$f"
             python3 -I - "$f" <<'EOF' || echo "::warning title=Could not read::$f"
           import sys, xml.etree.ElementTree as ET
           for case in ET.parse(sys.argv[1]).iter('testcase'):
               for problem in list(case.findall('failure')) + list(case.findall('error')):
-                  text = (problem.get('message') or problem.text or '').strip().replace('\n', '%0A')[:1500]
-                  print('::error title=' + case.get('classname', '') + '.' + case.get('name', '') + '::' + text)
+                  lines = (problem.text or problem.get('message') or '').strip().splitlines()
+                  keep = lines[:6] + [l for l in lines[6:] if 'Caused by' in l or 'de.danoeh' in l][:20]
+                  print('::error title=' + case.get('classname', '') + '.' + case.get('name', '') + '::' + '%0A'.join(keep)[:3500])
           EOF
           done
           grep -A15 "FATAL EXCEPTION" app/build/reports/androidTests/logcat.txt | head -40 | sed 's/^/::warning title=Crash in logcat::/' || true
