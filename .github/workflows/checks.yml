@@ -232,6 +232,46 @@ jobs:
           disable-animations: true
           script: bash .github/workflows/personalUpgradeTest.sh
 
+  migration-test:
+    name: "Migration test API ${{ matrix.api-level }}: differently signed build to this build"
+    needs: unit-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: [ 30, 34 ]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download this build's APK
+        uses: actions/download-artifact@v4
+        with:
+          name: app-play-debug.apk
+          path: new
+      - name: Download an APK signed with a different key
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download 39549751288 --repo "$GITHUB_REPOSITORY" -n app-play-debug.apk -D old
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Back up, reinstall with new key, restore
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: aosp_atd
+          arch: x86_64
+          channel: canary
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: bash .github/workflows/personalMigrationTest.sh
+
   ci-summary:
     name: "CI Summary"
     needs:
