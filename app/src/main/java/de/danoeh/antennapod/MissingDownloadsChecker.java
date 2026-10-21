@@ -10,6 +10,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import de.danoeh.antennapod.event.FeedItemEvent;
 import de.danoeh.antennapod.model.feed.FeedItem;
@@ -22,11 +23,15 @@ import de.danoeh.antennapod.storage.database.DBWriter;
 
 public class MissingDownloadsChecker {
     private static final String TAG = "MissingDownloadsChecker";
+    private static final AtomicBoolean checked = new AtomicBoolean(false);
 
     private MissingDownloadsChecker() {
     }
 
     public static void checkInBackground(Context context) {
+        if (checked.getAndSet(true)) {
+            return;
+        }
         Context appContext = context.getApplicationContext();
         new Thread(() -> check(appContext), TAG).start();
     }
