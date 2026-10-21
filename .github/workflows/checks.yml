@@ -176,6 +176,19 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: bash .github/workflows/runEmulatorTests.sh
+      - name: Report failed tests
+        if: failure()
+        run: |
+          for f in $(find app/build/outputs/androidTest-results -name '*.xml'); do
+            python3 -I - "$f" <<'EOF'
+          import sys, xml.etree.ElementTree as ET
+          for case in ET.parse(sys.argv[1]).iter('testcase'):
+              for problem in list(case.findall('failure')) + list(case.findall('error')):
+                  text = (problem.get('message') or problem.text or '').strip().replace('\n', '%0A')[:1500]
+                  print('::error title=' + case.get('classname', '') + '.' + case.get('name', '') + '::' + text)
+          EOF
+          done
+          grep -A15 "FATAL EXCEPTION" app/build/reports/androidTests/logcat.txt | head -40 | sed 's/^/::warning title=Crash in logcat::/' || true
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -204,7 +217,7 @@ jobs:
         run: |
           AAPT2="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/aapt2"
           THIS_PKG=$("$AAPT2" dump packagename new/app-play-debug.apk)
-          for RUN in $(gh run list --repo "$GITHUB_REPOSITORY" --workflow checks.yml --branch personal --status completed --limit 30 --json databaseId --jq '.[].databaseId'); do
+          for RUN in $(gh run list --repo "$GITHUB_REPOSITORY" --workflow checks.yml --branch personal --limit 30 --json databaseId --jq '.[].databaseId'); do
             rm -rf old
             if [ "$RUN" != "$GITHUB_RUN_ID" ] && gh run download "$RUN" --repo "$GITHUB_REPOSITORY" -n app-play-debug.apk -D old \
                 && [ "$("$AAPT2" dump packagename old/app-play-debug.apk)" = "$THIS_PKG" ]; then
@@ -241,6 +254,54 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: bash .github/workflows/personalUpgradeTest.sh
+
+  migration-test:
+    name: "Migration test API ${{ matrix.api-level }}: AntennaPod Debug to AntennaPod Personal"
+    needs: unit-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: [ 34, 36 ]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download this build's APK
+        uses: actions/download-artifact@v4
+        with:
+          name: app-play-debug.apk
+          path: new
+      - name: Download an AntennaPod Debug APK signed with a different key
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download 39549751288 --repo "$GITHUB_REPOSITORY" -n app-play-debug.apk -D old
+      - name: Install sqlite3
+        run: sudo apt-get install -y sqlite3
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Migrate with the USB script
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: aosp_atd
+          arch: x86_64
+          channel: canary
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: bash .github/workflows/personalMigrationTest.sh
+      - name: Report results
+        if: always()
+        run: |
+          [ -f migration-results.txt ] && echo "::notice title=Migration test results::$(sed ':a;N;$!ba;s/\n/%0A/g' migration-results.txt)"
+          [ -f migrate-output.txt ] && echo "::notice title=Migration script output::$(tail -n 60 migrate-output.txt | tr -d '\r' | sed ':a;N;$!ba;s/\n/%0A/g')"
+          true
 
   ci-summary:
     name: "CI Summary"

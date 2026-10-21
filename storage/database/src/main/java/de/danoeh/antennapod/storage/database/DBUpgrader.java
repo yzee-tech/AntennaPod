@@ -365,6 +365,13 @@ class DBUpgrader {
             db.execSQL("UPDATE " + PodDBAdapter.TABLE_NAME_FEEDS
                     + " SET " + PodDBAdapter.KEY_LASTUPDATE + " = NULL");
         }
+        if (oldVersion < 3130002) {
+            for (String table : new String[] {PodDBAdapter.TABLE_NAME_FEEDS, PodDBAdapter.TABLE_NAME_FEED_MEDIA}) {
+                db.execSQL("UPDATE " + table + " SET " + PodDBAdapter.KEY_FILE_URL + " = replace("
+                        + PodDBAdapter.KEY_FILE_URL + ", '/de.danoeh.antennapod.debug/', "
+                        + "'/de.danoeh.antennapod.personal/')");
+            }
+        }
     }
 
 }
