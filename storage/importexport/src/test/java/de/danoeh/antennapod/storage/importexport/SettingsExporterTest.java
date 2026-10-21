@@ -31,7 +31,8 @@ public class SettingsExporterTest {
                 + "\"prefPlaybackSpeed\":{\"type\":\"float\",\"value\":1.5},"
                 + "\"prefDataFolder\":{\"type\":\"string\",\"value\":\"/old/path\"},"
                 + "\"prefPlaybackSpeedArray\":{\"type\":\"string_set\",\"value\":[\"1.00\",\"1.50\"]}},"
-                + "\"SwipeActionsPrefs\":{\"PrefSwipeActionsQueue\":{\"type\":\"string\",\"value\":\"REMOVE_FROM_QUEUE,START_DOWNLOAD\"}},"
+                + "\"SwipeActionsPrefs\":{\"PrefSwipeActionsQueue\":"
+                + "{\"type\":\"string\",\"value\":\"REMOVE_FROM_QUEUE,START_DOWNLOAD\"}},"
                 + "\"gpodder.net\":{\"de.danoeh.antennapod.preferences.gpoddernet.password\":"
                 + "{\"type\":\"string\",\"value\":\"secret\"}}}}";
 

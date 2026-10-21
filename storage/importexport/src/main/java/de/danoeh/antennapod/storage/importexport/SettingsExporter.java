@@ -1,5 +1,6 @@
 package de.danoeh.antennapod.storage.importexport;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.Uri;
@@ -77,6 +78,7 @@ public class SettingsExporter {
         return root;
     }
 
+    @SuppressLint("ApplySharedPref")
     public static void applyImport(Context context, JSONObject root) throws JSONException {
         JSONObject files = root.getJSONObject("preferences");
         Iterator<String> names = files.keys();
