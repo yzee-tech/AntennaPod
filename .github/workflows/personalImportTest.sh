@@ -57,6 +57,7 @@ INSERT INTO FeedMedia (id, file_url, download_url, downloaded, filesize, mime_ty
   VALUES (900, '$OLDDIR/ep1.mp3', 'http://10.0.2.2:8000/ep1.mp3', 1700000000000, 400000, 'audio/mpeg', 900, 600000, 12345);
 INSERT INTO FeedMedia (id, file_url, download_url, downloaded, filesize, mime_type, feeditem, duration, position)
   VALUES (901, '$OLDDIR/ep2.mp3', 'http://10.0.2.2:8000/ep2.mp3', 1700000000000, 500000, 'audio/mpeg', 901, 600000, 23456);
+INSERT INTO Queue (id, feeditem, feed) VALUES (900, 900, 900);
 EOF
 adb push olddb/Antennapod.db /data/local/tmp/seed.db
 adb shell "run-as $OLD rm -f databases/Antennapod.db-wal databases/Antennapod.db-shm"
@@ -110,6 +111,7 @@ pull_db $NEW newdb
 check [ "$(q 'PRAGMA user_version;')" = "3130002" ]
 check [ "$(q 'SELECT position FROM FeedMedia WHERE id = 900;')" = "12345" ]
 check [ "$(q 'SELECT position FROM FeedMedia WHERE id = 901;')" = "23456" ]
+check [ "$(q 'SELECT group_concat(feeditem) FROM Queue WHERE feeditem IN (900, 901);')" = "900" ]
 for id in 900 901; do
   URL=$(q "SELECT file_url FROM FeedMedia WHERE id = $id;")
   result "episode $id: downloaded=$(q "SELECT downloaded FROM FeedMedia WHERE id = $id;") file=$URL"

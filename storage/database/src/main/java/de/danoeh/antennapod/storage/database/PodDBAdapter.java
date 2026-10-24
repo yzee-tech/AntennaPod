@@ -675,6 +675,22 @@ public class PodDBAdapter {
         }
     }
 
+    public void setFeedItemPreviewTexts(List<FeedItem> items) {
+        try {
+            db.beginTransactionNonExclusive();
+            for (FeedItem item : items) {
+                ContentValues values = new ContentValues();
+                values.put(KEY_PREVIEW_TEXT, item.getPreviewText());
+                db.update(TABLE_NAME_FEED_ITEMS, values, KEY_ID + "=?", new String[]{String.valueOf(item.getId())});
+            }
+            db.setTransactionSuccessful();
+        } catch (SQLException e) {
+            Log.e(TAG, Log.getStackTraceString(e));
+        } finally {
+            db.endTransaction();
+        }
+    }
+
     public long setSingleFeedItem(FeedItem item) {
         long result = 0;
         try {

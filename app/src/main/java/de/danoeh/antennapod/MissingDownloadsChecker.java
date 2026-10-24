@@ -66,7 +66,7 @@ public class MissingDownloadsChecker {
         Log.i(TAG, "Downloading " + missing.size() + " episodes again because their files are missing");
         EventBus.getDefault().post(new FeedItemEvent(missing, false));
         for (FeedItem item : missing) {
-            DownloadServiceInterface.get().download(context, item);
+            DownloadServiceInterface.get().downloadWithoutEnqueue(context, item);
         }
     }
 }

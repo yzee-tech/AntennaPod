@@ -253,7 +253,7 @@ public class FeedUpdateWorker extends Worker {
                     }
                 }
                 if (!itemsWithoutPreview.isEmpty()) {
-                    DBWriter.setItemList(itemsWithoutPreview).get();
+                    DBWriter.setFeedItemPreviewTexts(itemsWithoutPreview).get();
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Could not create episode previews", e);
