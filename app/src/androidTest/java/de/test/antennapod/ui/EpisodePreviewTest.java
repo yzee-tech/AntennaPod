@@ -3,7 +3,6 @@ package de.test.antennapod.ui;
 import android.content.Context;
 import android.content.Intent;
 import androidx.preference.PreferenceManager;
-import androidx.test.espresso.contrib.RecyclerViewActions;
 import androidx.test.espresso.intent.rule.IntentsTestRule;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -26,14 +25,12 @@ import java.util.List;
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.assertion.ViewAssertions.doesNotExist;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
-import static androidx.test.espresso.matcher.ViewMatchers.hasDescendant;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.isRoot;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
 import static androidx.test.espresso.matcher.ViewMatchers.withText;
 import static de.test.antennapod.EspressoTestUtils.waitForView;
 import static org.hamcrest.CoreMatchers.allOf;
-import static org.hamcrest.CoreMatchers.startsWith;
 
 @RunWith(AndroidJUnit4.class)
 public class EpisodePreviewTest {
@@ -79,8 +76,7 @@ public class EpisodePreviewTest {
     public void testPreviewShownWhenEnabled() {
         setPreviewEnabled(true);
         activityRule.launchActivity(new Intent());
-        FeedItem item = feed.getItemAtIndex(0);
-        scrollEpisodeOnScreen(item);
+        FeedItem item = waitForNewestItemDisplayed();
         onView(allOf(withId(R.id.txtvPreview), withText(PREVIEW + " " + item.getTitle())))
                 .check(matches(isDisplayed()));
     }
@@ -89,39 +85,32 @@ public class EpisodePreviewTest {
     public void testPreviewHiddenWhenDisabled() {
         setPreviewEnabled(false);
         activityRule.launchActivity(new Intent());
-        FeedItem item = feed.getItemAtIndex(0);
-        scrollEpisodeOnScreen(item);
+        FeedItem item = waitForNewestItemDisplayed();
         onView(allOf(withId(R.id.txtvPreview), withText(PREVIEW + " " + item.getTitle())))
                 .check(doesNotExist());
     }
 
     /**
-     * Scrolls the target episode's row on screen and returns only once the row is actually
-     * displayed. RecyclerViewActions.scrollTo just calls RecyclerView.scrollToPosition and
-     * waits for the main thread to idle - it neither waits for the layout pass that applies
-     * the scroll nor verifies visibility, so a single scroll-then-check can observe the row
-     * attached but still outside the viewport on a slow emulator. Repeating the scroll plus
-     * a displayed-check until the row is genuinely visible removes that race without
-     * weakening the test: if the row never appears, this fails loudly after the deadline.
+     * Waits until the list has loaded and the newest episode's row is actually displayed,
+     * then returns that item. The newest item is what the preview assertions below run
+     * against: setUp gives the items spaced publication dates, so the newest one is
+     * deterministically the first row of the newest-first list and renders on screen
+     * without scrolling.
+     *
+     * Deliberately no scrolling: espresso's scrollTo is only RecyclerView.scrollToPosition
+     * plus one idle wait, and on this collapsing-toolbar screen (tiny emulator viewport,
+     * large bottom padding for the speed-dial overlay) it deterministically stalled
+     * part-way in CI - the target row was never laid out on API 36, and was left attached
+     * but outside the visible rect on API 30. Preview visibility is a property of the
+     * row binding, not of any particular row, so asserting on the always-visible first
+     * row checks the same behavior without depending on an unreliable scroll.
      */
-    private void scrollEpisodeOnScreen(FeedItem item) {
+    private FeedItem waitForNewestItemDisplayed() {
+        FeedItem item = feed.getItemAtIndex(feed.getItems().size() - 1);
         onView(isRoot()).perform(waitForView(
-                allOf(withId(R.id.txtvTitle), withText(startsWith("Feed "))), LIST_LOAD_TIMEOUT_MS));
-        long deadline = System.currentTimeMillis() + LIST_LOAD_TIMEOUT_MS;
-        while (true) {
-            onView(withId(R.id.recyclerView))
-                    .perform(RecyclerViewActions.scrollTo(hasDescendant(withText(item.getTitle()))));
-            try {
-                onView(allOf(withId(R.id.txtvTitle), withText(item.getTitle()), isDisplayed()))
-                        .check(matches(isDisplayed()));
-                return;
-            } catch (Throwable t) {
-                if (System.currentTimeMillis() > deadline) {
-                    throw new AssertionError("Episode row did not become displayed after scrolling: "
-                            + item.getTitle(), t);
-                }
-            }
-        }
+                allOf(withId(R.id.txtvTitle), withText(item.getTitle()), isDisplayed()),
+                LIST_LOAD_TIMEOUT_MS));
+        return item;
     }
 
     private void setPreviewEnabled(boolean enabled) {
