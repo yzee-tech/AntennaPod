@@ -80,7 +80,7 @@ public class EpisodePreviewTest {
         setPreviewEnabled(true);
         activityRule.launchActivity(new Intent());
         FeedItem item = feed.getItemAtIndex(0);
-        scrollToEpisode(item);
+        scrollEpisodeOnScreen(item);
         onView(allOf(withId(R.id.txtvPreview), withText(PREVIEW + " " + item.getTitle())))
                 .check(matches(isDisplayed()));
     }
@@ -90,21 +90,38 @@ public class EpisodePreviewTest {
         setPreviewEnabled(false);
         activityRule.launchActivity(new Intent());
         FeedItem item = feed.getItemAtIndex(0);
-        scrollToEpisode(item);
-        onView(withText(item.getTitle())).check(matches(isDisplayed()));
-        onView(withText(PREVIEW + " " + item.getTitle())).check(doesNotExist());
+        scrollEpisodeOnScreen(item);
+        onView(allOf(withId(R.id.txtvPreview), withText(PREVIEW + " " + item.getTitle())))
+                .check(doesNotExist());
     }
 
     /**
-     * Waits for the episode list to load, then scrolls the target episode on screen.
-     * The list displays newest-first, so older seeded episodes start off-screen and a
-     * plain waitForView for their title times out without ever checking the preview.
+     * Scrolls the target episode's row on screen and returns only once the row is actually
+     * displayed. RecyclerViewActions.scrollTo just calls RecyclerView.scrollToPosition and
+     * waits for the main thread to idle - it neither waits for the layout pass that applies
+     * the scroll nor verifies visibility, so a single scroll-then-check can observe the row
+     * attached but still outside the viewport on a slow emulator. Repeating the scroll plus
+     * a displayed-check until the row is genuinely visible removes that race without
+     * weakening the test: if the row never appears, this fails loudly after the deadline.
      */
-    private void scrollToEpisode(FeedItem item) {
+    private void scrollEpisodeOnScreen(FeedItem item) {
         onView(isRoot()).perform(waitForView(
                 allOf(withId(R.id.txtvTitle), withText(startsWith("Feed "))), LIST_LOAD_TIMEOUT_MS));
-        onView(withId(R.id.recyclerView))
-                .perform(RecyclerViewActions.scrollTo(hasDescendant(withText(item.getTitle()))));
+        long deadline = System.currentTimeMillis() + LIST_LOAD_TIMEOUT_MS;
+        while (true) {
+            onView(withId(R.id.recyclerView))
+                    .perform(RecyclerViewActions.scrollTo(hasDescendant(withText(item.getTitle()))));
+            try {
+                onView(allOf(withId(R.id.txtvTitle), withText(item.getTitle()), isDisplayed()))
+                        .check(matches(isDisplayed()));
+                return;
+            } catch (Throwable t) {
+                if (System.currentTimeMillis() > deadline) {
+                    throw new AssertionError("Episode row did not become displayed after scrolling: "
+                            + item.getTitle(), t);
+                }
+            }
+        }
     }
 
     private void setPreviewEnabled(boolean enabled) {
