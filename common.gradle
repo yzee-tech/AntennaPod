@@ -22,7 +22,7 @@ android {
             resValue "string", "app_name", "AntennaPod"
         }
         debug {
-            resValue "string", "app_name", "AntennaPod Debug"
+            resValue "string", "app_name", "AntennaPod Personal"
         }
     }
 

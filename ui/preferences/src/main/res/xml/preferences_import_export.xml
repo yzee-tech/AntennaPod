@@ -21,6 +21,19 @@
                 android:summary="@string/database_import_summary"/>
     </PreferenceCategory>
 
+    <PreferenceCategory android:title="@string/settings_label">
+        <Preference
+                android:key="prefSettingsExport"
+                search:keywords="@string/import_export_search_keywords"
+                android:title="@string/settings_export_label"
+                android:summary="@string/settings_export_summary"/>
+        <Preference
+                android:key="prefSettingsImport"
+                search:keywords="@string/import_export_search_keywords"
+                android:title="@string/settings_import_label"
+                android:summary="@string/settings_import_summary"/>
+    </PreferenceCategory>
+
     <PreferenceCategory android:title="@string/opml">
         <Preference
                 android:key="prefOpmlExport"

@@ -541,6 +541,8 @@
     <string name="pref_episode_cover_summary">Use the episode specific cover in lists whenever available. If unchecked, the app will always use the podcast cover image.</string>
     <string name="pref_show_remain_time_title">Show remaining time</string>
     <string name="pref_show_remain_time_summary">Display remaining time of episodes when checked. If unchecked, display total duration of episodes.</string>
+    <string name="pref_episode_preview_title">Show episode preview</string>
+    <string name="pref_episode_preview_summary">Show the podcast name and a short preview of each episode in episode lists</string>
     <string name="pref_theme_title_automatic">Automatic</string>
     <string name="pref_theme_title_light">Light</string>
     <string name="pref_theme_title_dark">Dark</string>
@@ -683,6 +685,11 @@
     <string name="opml_import_ask_read_permission">Access to external storage is required to read the OPML file</string>
     <string name="successful_import_label">Import successful</string>
     <string name="import_ok">Please press OK to restart AntennaPod</string>
+    <string name="settings_export_label">Settings export</string>
+    <string name="settings_export_summary">Save all app settings to a file</string>
+    <string name="settings_import_label">Settings import</string>
+    <string name="settings_import_summary">Restore app settings from a file</string>
+    <string name="settings_import_warning">Importing settings replaces the settings contained in the file. Do you want to continue?</string>
     <string name="import_no_downgrade">This database was exported with a newer version of AntennaPod. Your current installation does not yet know how to handle this file.</string>
     <string name="import_error_label">Import error</string>
     <string name="favorites_export_label">Favorites export</string>

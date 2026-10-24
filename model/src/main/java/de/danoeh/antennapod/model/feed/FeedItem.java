@@ -34,6 +34,7 @@ public class FeedItem implements Serializable {
      * The description of a feeditem.
      */
     private String description;
+    private String previewText;
 
     private String link;
     private Date pubDate;
@@ -146,6 +147,9 @@ public class FeedItem implements Serializable {
         if (other.getDescription() != null) {
             description = other.getDescription();
         }
+        if (other.previewText != null) {
+            previewText = other.previewText;
+        }
         if (other.link != null) {
             link = other.link;
         }
@@ -222,6 +226,27 @@ public class FeedItem implements Serializable {
 
     public String getDescription() {
         return description;
+    }
+
+    public String getPreviewText() {
+        return previewText;
+    }
+
+    public void setPreviewText(String previewText) {
+        this.previewText = previewText;
+    }
+
+    public void setPreviewTextIfShorter(String newPreviewText) {
+        if (StringUtils.isBlank(newPreviewText)) {
+            return;
+        }
+        if (previewText != null && newPreviewText.length() >= previewText.length()) {
+            return;
+        }
+        if (StringUtils.isBlank(newPreviewText.replaceAll("<[^>]*>|&nbsp;", ""))) {
+            return;
+        }
+        previewText = newPreviewText;
     }
 
     public String getLink() {

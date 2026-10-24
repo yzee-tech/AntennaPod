@@ -19,6 +19,7 @@ public class Content extends Namespace {
     public void handleElementEnd(String localName, HandlerState state) {
         if (ENCODED.equals(localName) && state.getCurrentItem() != null && state.getContentBuf() != null) {
             state.getCurrentItem().setDescriptionIfLonger(state.getContentBuf().toString());
+            state.getCurrentItem().setPreviewTextIfShorter(state.getContentBuf().toString());
         }
     }
 }

@@ -355,6 +355,39 @@ class DBUpgrader {
             db.execSQL("DELETE FROM " + PodDBAdapter.TABLE_NAME_FAVORITES + " WHERE " + PodDBAdapter.KEY_FEEDITEM
                     + " NOT IN (SELECT " + PodDBAdapter.KEY_ID + " FROM " + PodDBAdapter.TABLE_NAME_FEED_ITEMS + ")");
         }
+        if (oldVersion < 3130000) {
+            db.execSQL("ALTER TABLE " + PodDBAdapter.TABLE_NAME_FEED_ITEMS
+                    + " ADD COLUMN " + PodDBAdapter.KEY_PREVIEW_TEXT + " TEXT");
+            db.execSQL("UPDATE " + PodDBAdapter.TABLE_NAME_FEEDS
+                    + " SET " + PodDBAdapter.KEY_LASTUPDATE + " = NULL");
+        }
+        if (oldVersion < 3130001) {
+            db.execSQL("UPDATE " + PodDBAdapter.TABLE_NAME_FEEDS
+                    + " SET " + PodDBAdapter.KEY_LASTUPDATE + " = NULL");
+        }
+        if (oldVersion < 3130002) {
+            for (String table : new String[] {PodDBAdapter.TABLE_NAME_FEEDS, PodDBAdapter.TABLE_NAME_FEED_MEDIA}) {
+                db.execSQL("UPDATE " + table + " SET " + PodDBAdapter.KEY_FILE_URL + " = replace("
+                        + PodDBAdapter.KEY_FILE_URL + ", '/de.danoeh.antennapod.debug/', "
+                        + "'/de.danoeh.antennapod.personal/')");
+            }
+        }
+        if (!hasColumn(db, PodDBAdapter.TABLE_NAME_FEED_ITEMS, PodDBAdapter.KEY_PREVIEW_TEXT)) {
+            db.execSQL("ALTER TABLE " + PodDBAdapter.TABLE_NAME_FEED_ITEMS
+                    + " ADD COLUMN " + PodDBAdapter.KEY_PREVIEW_TEXT + " TEXT");
+        }
+    }
+
+    private static boolean hasColumn(SQLiteDatabase db, String table, String column) {
+        try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + table + ")", null)) {
+            int nameIndex = cursor.getColumnIndexOrThrow("name");
+            while (cursor.moveToNext()) {
+                if (column.equals(cursor.getString(nameIndex))) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
 }

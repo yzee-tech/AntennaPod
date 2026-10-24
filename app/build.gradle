@@ -25,12 +25,20 @@ android {
             keyAlias project.getProperties().getOrDefault("releaseKeyAlias", "alias")
             keyPassword project.getProperties().getOrDefault("releaseKeyPassword", "password")
         }
+        debug {
+            if (System.getenv("PERSONAL_DEBUG_KEYSTORE")) {
+                storeFile file(System.getenv("PERSONAL_DEBUG_KEYSTORE"))
+                storePassword "android"
+                keyAlias "androiddebugkey"
+                keyPassword "android"
+            }
+        }
     }
 
     buildTypes {
         debug {
-            applicationIdSuffix ".debug"
-            resValue "string", "provider_authority", "de.danoeh.antennapod.debug.provider"
+            applicationIdSuffix ".personal"
+            resValue "string", "provider_authority", "de.danoeh.antennapod.personal.provider"
         }
         release {
             resValue "string", "provider_authority", "de.danoeh.antennapod.provider"
