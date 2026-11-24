@@ -15,6 +15,10 @@ public class DownloadServiceInterfaceStub extends DownloadServiceInterface {
     }
 
     @Override
+    public void downloadWithoutEnqueue(Context context, FeedItem item) {
+    }
+
+    @Override
     public void cancel(Context context, FeedMedia media) {
     }
 

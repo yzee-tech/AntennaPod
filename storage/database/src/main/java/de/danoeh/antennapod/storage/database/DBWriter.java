@@ -720,6 +720,15 @@ public class DBWriter {
         });
     }
 
+    public static Future<?> setFeedItemPreviewTexts(final List<FeedItem> items) {
+        return runOnDbThread(() -> {
+            PodDBAdapter adapter = PodDBAdapter.getInstance();
+            adapter.open();
+            adapter.setFeedItemPreviewTexts(items);
+            adapter.close();
+        });
+    }
+
     public static Future<?> setItemList(final List<FeedItem> items) {
         return runOnDbThread(() -> {
             PodDBAdapter adapter = PodDBAdapter.getInstance();

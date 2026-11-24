@@ -69,6 +69,13 @@ public class RssParserTest {
     }
 
     @Test
+    public void testLegacyItunesNamespace() throws Exception {
+        File feedFile = FeedParserTestHelper.getFeedFile("feed-rss-testLegacyItunesNamespace.xml");
+        Feed feed = FeedParserTestHelper.runFeedParser(feedFile);
+        assertEquals("https://example.com/image.png", feed.getImageUrl());
+    }
+
+    @Test
     public void testMediaContentMime() throws Exception {
         File feedFile = FeedParserTestHelper.getFeedFile("feed-rss-testMediaContentMime.xml");
         Feed feed = FeedParserTestHelper.runFeedParser(feedFile);
@@ -103,6 +110,15 @@ public class RssParserTest {
         Feed feed = FeedParserTestHelper.runFeedParser(feedFile);
         assertEquals("https://podnews.net/audio/podnews231011.mp3.json", feed.getItems().get(0).getTranscriptUrl());
         assertEquals("application/json", feed.getItems().get(0).getTranscriptType());
+    }
+
+    @Test
+    public void testPreviewText() throws Exception {
+        File feedFile = FeedParserTestHelper.getFeedFile("feed-rss-testPreviewText.xml");
+        Feed feed = FeedParserTestHelper.runFeedParser(feedFile);
+        assertEquals("Short summary", feed.getItems().get(0).getPreviewText());
+        assertEquals("Hello & world", feed.getItems().get(1).getPreviewText());
+        assertEquals("Real show notes", feed.getItems().get(2).getPreviewText());
     }
 
     @Test

@@ -2,6 +2,7 @@ package de.danoeh.antennapod.ui.episodeslist;
 
 import android.app.Activity;
 import android.text.Layout;
+import android.text.TextUtils;
 import android.text.format.Formatter;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -59,12 +60,15 @@ public class EpisodeItemViewHolder extends RecyclerView.ViewHolder {
     private final TextView separatorIcons;
     private final View leftPadding;
     public final CardView coverHolder;
+    private final TextView feedTitle;
+    private final TextView previewText;
 
     private final Activity activity;
     private FeedItem item;
 
-    public EpisodeItemViewHolder(Activity activity, ViewGroup parent) {
-        super(LayoutInflater.from(activity).inflate(R.layout.feeditemlist_item, parent, false));
+    public EpisodeItemViewHolder(Activity activity, ViewGroup parent, int viewType) {
+        super(LayoutInflater.from(activity).inflate(viewType == R.id.view_type_episode_item_preview
+                ? R.layout.feeditemlist_item_preview : R.layout.feeditemlist_item, parent, false));
         this.activity = activity;
         container = itemView.findViewById(R.id.container);
         dragHandle = itemView.findViewById(R.id.drag_handle);
@@ -87,6 +91,8 @@ public class EpisodeItemViewHolder extends RecyclerView.ViewHolder {
         secondaryActionIcon = itemView.findViewById(R.id.secondaryActionIcon);
         coverHolder = itemView.findViewById(R.id.coverHolder);
         leftPadding = itemView.findViewById(R.id.left_padding);
+        feedTitle = itemView.findViewById(R.id.txtvFeedTitle);
+        previewText = itemView.findViewById(R.id.txtvPreview);
         itemView.setTag(this);
     }
 
@@ -94,6 +100,13 @@ public class EpisodeItemViewHolder extends RecyclerView.ViewHolder {
         this.item = item;
         placeholder.setText(item.getFeed().getTitle());
         title.setText(item.getTitle());
+        if (feedTitle != null) {
+            feedTitle.setText(item.getFeed().getTitle());
+        }
+        if (previewText != null) {
+            previewText.setText(item.getPreviewText());
+            previewText.setVisibility(TextUtils.isEmpty(item.getPreviewText()) ? View.GONE : View.VISIBLE);
+        }
         if (item.isPlayed()) {
             leftPadding.setContentDescription(item.getTitle() + ". " + activity.getString(R.string.is_played));
         } else {
@@ -203,6 +216,12 @@ public class EpisodeItemViewHolder extends RecyclerView.ViewHolder {
         isFavorite.setVisibility(View.GONE);
         isInQueue.setVisibility(View.GONE);
         title.setText("███████");
+        if (feedTitle != null) {
+            feedTitle.setText("████");
+        }
+        if (previewText != null) {
+            previewText.setVisibility(View.GONE);
+        }
         pubDate.setText("████");
         duration.setText("████");
         secondaryActionProgress.setPercentage(0, null);

@@ -55,7 +55,7 @@ public class PodDBAdapter {
 
     private static final String TAG = "PodDBAdapter";
     public static final String DATABASE_NAME = "Antennapod.db";
-    public static final int VERSION = 3110000;
+    public static final int VERSION = 3130002;
 
     /**
      * Maximum number of arguments for IN-operator.
@@ -128,6 +128,7 @@ public class PodDBAdapter {
     public static final String KEY_STATE = "state";
     public static final String KEY_PODCASTINDEX_TRANSCRIPT_URL = "podcastindex_transcript_url";
     public static final String KEY_PODCASTINDEX_TRANSCRIPT_TYPE = "podcastindex_transcript_type";
+    public static final String KEY_PREVIEW_TEXT = "preview_text";
 
     // Table names
     public static final String TABLE_NAME_FEEDS = "Feeds";
@@ -193,7 +194,8 @@ public class PodDBAdapter {
             + KEY_PODCASTINDEX_CHAPTER_URL + " TEXT,"
             + KEY_PODCASTINDEX_TRANSCRIPT_TYPE + " TEXT,"
             + KEY_PODCASTINDEX_TRANSCRIPT_URL + " TEXT,"
-            + KEY_SOCIAL_INTERACT_URL + " TEXT)";
+            + KEY_SOCIAL_INTERACT_URL + " TEXT,"
+            + KEY_PREVIEW_TEXT + " TEXT)";
 
     private static final String CREATE_TABLE_FEED_MEDIA = "CREATE TABLE "
             + TABLE_NAME_FEED_MEDIA + " (" + TABLE_PRIMARY_KEY + KEY_DURATION
@@ -287,6 +289,7 @@ public class PodDBAdapter {
             + TABLE_NAME_FEED_ITEMS + "." + KEY_SOCIAL_INTERACT_URL + ", "
             + TABLE_NAME_FEED_ITEMS + "." + KEY_PODCASTINDEX_TRANSCRIPT_TYPE + ", "
             + TABLE_NAME_FEED_ITEMS + "." + KEY_PODCASTINDEX_TRANSCRIPT_URL + ", "
+            + TABLE_NAME_FEED_ITEMS + "." + KEY_PREVIEW_TEXT + ", "
             + TABLE_NAME_FEED_ITEMS + "." + KEY_ID + " IN (SELECT " + TABLE_NAME_FAVORITES + "." + KEY_FEEDITEM
             + " FROM " + TABLE_NAME_FAVORITES + ") AS " + SELECT_KEY_IS_FAVORITE + ", "
             + TABLE_NAME_FEED_ITEMS + "." + KEY_ID + " IN (SELECT " + TABLE_NAME_QUEUE + "." + KEY_FEEDITEM
@@ -672,6 +675,22 @@ public class PodDBAdapter {
         }
     }
 
+    public void setFeedItemPreviewTexts(List<FeedItem> items) {
+        try {
+            db.beginTransactionNonExclusive();
+            for (FeedItem item : items) {
+                ContentValues values = new ContentValues();
+                values.put(KEY_PREVIEW_TEXT, item.getPreviewText());
+                db.update(TABLE_NAME_FEED_ITEMS, values, KEY_ID + "=?", new String[]{String.valueOf(item.getId())});
+            }
+            db.setTransactionSuccessful();
+        } catch (SQLException e) {
+            Log.e(TAG, Log.getStackTraceString(e));
+        } finally {
+            db.endTransaction();
+        }
+    }
+
     public long setSingleFeedItem(FeedItem item) {
         long result = 0;
         try {
@@ -705,6 +724,9 @@ public class PodDBAdapter {
         values.put(KEY_LINK, item.getLink());
         if (item.getDescription() != null) {
             values.put(KEY_DESCRIPTION, item.getDescription());
+        }
+        if (item.getPreviewText() != null) {
+            values.put(KEY_PREVIEW_TEXT, item.getPreviewText());
         }
         values.put(KEY_PUBDATE, item.getPubDate().getTime());
         values.put(KEY_PAYMENT_LINK, item.getPaymentLink());
@@ -1125,6 +1147,30 @@ public class PodDBAdapter {
         return db.rawQuery(query, null);
     }
 
+    public final Cursor getAutoDownloadCandidatesCursor(boolean globalAutoDownloadEnabled, boolean includeQueue) {
+        String feedAutoDownloadCondition = globalAutoDownloadEnabled
+                ? "!=" + FeedPreferences.AutoDownloadSetting.DISABLED.code
+                : "=" + FeedPreferences.AutoDownloadSetting.ENABLED.code;
+        String feedHasAutoDownload = TABLE_NAME_FEED_ITEMS + "." + KEY_FEED
+                + " IN (SELECT " + KEY_ID + " FROM " + TABLE_NAME_FEEDS
+                + " WHERE " + KEY_STATE + "=" + Feed.STATE_SUBSCRIBED
+                + " AND " + KEY_AUTO_DOWNLOAD_ENABLED + feedAutoDownloadCondition + ")";
+        String feedIsNotLocal = TABLE_NAME_FEED_ITEMS + "." + KEY_FEED
+                + " IN (SELECT " + KEY_ID + " FROM " + TABLE_NAME_FEEDS
+                + " WHERE " + KEY_DOWNLOAD_URL + " IS NULL OR " + KEY_DOWNLOAD_URL
+                + " NOT LIKE '" + Feed.PREFIX_LOCAL_FOLDER + "%')";
+        String queueCondition = includeQueue ? " OR " + SELECT_KEY_IS_IN_QUEUE : "";
+        final String query = SELECT_FEED_ITEMS_AND_MEDIA
+                + " WHERE " + TABLE_NAME_FEED_ITEMS + "." + KEY_AUTO_DOWNLOAD_ENABLED + "!=0"
+                + " AND " + TABLE_NAME_FEED_MEDIA + "." + KEY_ID + " IS NOT NULL"
+                + " AND " + TABLE_NAME_FEED_MEDIA + "." + KEY_DOWNLOAD_DATE + "=0"
+                + " AND " + feedIsNotLocal
+                + " AND ((" + TABLE_NAME_FEED_ITEMS + "." + KEY_READ + "=" + FeedItem.NEW
+                + " AND " + feedHasAutoDownload + ")" + queueCondition + ")"
+                + " ORDER BY " + TABLE_NAME_FEED_ITEMS + "." + KEY_PUBDATE + " DESC";
+        return db.rawQuery(query, null);
+    }
+
     public final Cursor getEpisodeCountCursor(FeedItemFilter filter) {
         String filterQuery = FeedItemFilterQuery.generateFrom(filter);
         String whereClause = "".equals(filterQuery) ? "" : " WHERE " + filterQuery;
@@ -1267,9 +1313,14 @@ public class PodDBAdapter {
                                 + " THEN (" + playedTime + ") ELSE 0 END), 0) AS played_time, "
                         + "IFNULL(SUM(" + TABLE_NAME_FEED_MEDIA + "." + KEY_DURATION + "), 0) AS total_time, "
                         + "SUM(CASE WHEN " + TABLE_NAME_FEED_MEDIA + "." + KEY_DOWNLOAD_DATE + " > 0"
+                                + " OR " + TABLE_NAME_FEEDS + "." + KEY_DOWNLOAD_URL
+                                + " LIKE '" + Feed.PREFIX_LOCAL_FOLDER + "%'"
                                 + " THEN 1 ELSE 0 END) AS num_downloaded, "
                         + "SUM(CASE WHEN " + TABLE_NAME_FEED_MEDIA + "." + KEY_DOWNLOAD_DATE + " > 0"
-                                + " THEN " + TABLE_NAME_FEED_MEDIA + "." + KEY_SIZE + " ELSE 0 END) AS download_size, "
+                                + " OR " + TABLE_NAME_FEEDS + "." + KEY_DOWNLOAD_URL
+                                + " LIKE '" + Feed.PREFIX_LOCAL_FOLDER + "%'"
+                                + " THEN " + TABLE_NAME_FEED_MEDIA + "." + KEY_SIZE
+                                + " ELSE 0 END) AS download_size, "
                         + "SUM(CASE WHEN " + TABLE_NAME_FEED_ITEMS + "." + KEY_READ + " != " + FeedItem.PLAYED
                                 + " AND " + TABLE_NAME_FEED_ITEMS + "." + KEY_PUBDATE + " >= " + sixMonthsAgo
                                 + " THEN 1 ELSE 0 END) AS num_recent_unplayed "
@@ -1309,6 +1360,8 @@ public class PodDBAdapter {
 
     public final Map<Long, Integer> getFeedCounters(FeedCounter setting, long... feedIds) {
         String whereRead;
+        String localFeedCondition = KEY_FEED + " IN (SELECT " + KEY_ID + " FROM " + TABLE_NAME_FEEDS
+                + " WHERE " + KEY_DOWNLOAD_URL + " LIKE '" + Feed.PREFIX_LOCAL_FOLDER + "%')";
         switch (setting) {
             case SHOW_NEW:
                 whereRead = KEY_READ + "=" + FeedItem.NEW;
@@ -1318,12 +1371,12 @@ public class PodDBAdapter {
                         + " OR " + KEY_READ + "=" + FeedItem.UNPLAYED + ")";
                 break;
             case SHOW_DOWNLOADED:
-                whereRead = KEY_DOWNLOAD_DATE + ">0";
+                whereRead = "(" + KEY_DOWNLOAD_DATE + ">0 OR " + localFeedCondition + ")";
                 break;
             case SHOW_DOWNLOADED_UNPLAYED:
                 whereRead = "(" + KEY_READ + "=" + FeedItem.NEW
                         + " OR " + KEY_READ + "=" + FeedItem.UNPLAYED + ")"
-                        + " AND " + KEY_DOWNLOAD_DATE + ">0";
+                        + " AND (" + KEY_DOWNLOAD_DATE + ">0 OR " + localFeedCondition + ")";
                 break;
             case SHOW_NONE:
                 // deliberate fall-through

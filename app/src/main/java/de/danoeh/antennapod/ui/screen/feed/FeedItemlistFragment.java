@@ -1,11 +1,7 @@
 package de.danoeh.antennapod.ui.screen.feed;
 
-import android.content.ClipData;
-import android.content.ClipboardManager;
-import android.content.Context;
 import android.content.res.Configuration;
 import android.graphics.LightingColorFilter;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.ContextMenu;
@@ -47,9 +43,9 @@ import de.danoeh.antennapod.storage.preferences.UserPreferences;
 import de.danoeh.antennapod.ui.CoverLoader;
 import de.danoeh.antennapod.ui.FeedItemFilterDialog;
 import de.danoeh.antennapod.ui.MenuItemUtils;
-import de.danoeh.antennapod.ui.TransitionEffect;
 import de.danoeh.antennapod.ui.appstartintent.MainActivityStarter;
 import de.danoeh.antennapod.ui.cleaner.HtmlToPlainText;
+import de.danoeh.antennapod.ui.common.ClipboardUtils;
 import de.danoeh.antennapod.ui.common.IntentUtils;
 import de.danoeh.antennapod.ui.common.OnCollapseChangeListener;
 import de.danoeh.antennapod.ui.episodeslist.EpisodeItemListAdapter;
@@ -147,7 +143,6 @@ public class FeedItemlistFragment extends Fragment implements AdapterView.OnItem
         }
         if (getActivity() instanceof MainActivity) {
             ((MainActivity) getActivity()).setupToolbarToggle(viewBinding.toolbar, displayUpArrow);
-            viewBinding.recyclerView.setRecycledViewPool(((MainActivity) getActivity()).getRecycledViewPool());
         } else {
             viewBinding.toolbar.setNavigationIcon(R.drawable.ic_close);
             viewBinding.toolbar.setNavigationOnClickListener(view -> getActivity().finish());
@@ -287,6 +282,11 @@ public class FeedItemlistFragment extends Fragment implements AdapterView.OnItem
             viewBinding.toolbar.getMenu().findItem(R.id.sort_items).setVisible(false);
         }
         FeedMenuHandler.onPrepareMenu(viewBinding.toolbar.getMenu(), Collections.singletonList(feed));
+        if (!(getActivity() instanceof MainActivity)) {
+            viewBinding.toolbar.getMenu().findItem(R.id.action_search).setVisible(false);
+            viewBinding.toolbar.getMenu().findItem(R.id.remove_archive_feed).setVisible(false);
+            viewBinding.toolbar.getMenu().findItem(R.id.remove_restore_feed).setVisible(false);
+        }
     }
 
     @Override
@@ -532,7 +532,7 @@ public class FeedItemlistFragment extends Fragment implements AdapterView.OnItem
         }
         boolean isNotSubscribed = feed.getState() == Feed.STATE_NOT_SUBSCRIBED;
         boolean isArchived = feed.getState() == Feed.STATE_ARCHIVED;
-        boolean showSettingsButtons = !isNotSubscribed && !isArchived;
+        boolean showSettingsButtons = !isNotSubscribed && !isArchived && getActivity() instanceof MainActivity;
         viewBinding.header.butShowInfo.setVisibility(!isNotSubscribed ? View.VISIBLE : View.GONE);
         viewBinding.header.butFilter.setVisibility(showSettingsButtons ? View.VISIBLE : View.GONE);
         viewBinding.header.butShowSettings.setVisibility(showSettingsButtons ? View.VISIBLE : View.GONE);
@@ -570,8 +570,7 @@ public class FeedItemlistFragment extends Fragment implements AdapterView.OnItem
             if (feed == null) {
                 return;
             }
-            FeedSettingsFragment fragment = FeedSettingsFragment.newInstance(feed);
-            ((MainActivity) getActivity()).loadChildFragment(fragment, TransitionEffect.SLIDE);
+            ((MainActivity) getActivity()).loadChildFragment(FeedSettingsFragment.newInstance(feed));
         });
         viewBinding.header.butFilter.setOnClickListener(v -> {
             if (feed == null) {
@@ -581,24 +580,13 @@ public class FeedItemlistFragment extends Fragment implements AdapterView.OnItem
         });
         viewBinding.header.txtvFailure.setOnClickListener(v -> showErrorDetails());
         viewBinding.header.txtvAuthor.setOnLongClickListener(view -> {
-            copyToClipboard(requireContext(), viewBinding.header.txtvAuthor.getText().toString());
+            ClipboardUtils.copyText(viewBinding.header.txtvAuthor);
             return true;
         });
         viewBinding.header.txtvTitle.setOnLongClickListener(view -> {
-            copyToClipboard(requireContext(), viewBinding.header.txtvTitle.getText().toString());
+            ClipboardUtils.copyText(viewBinding.header.txtvTitle);
             return true;
         });
-    }
-
-    public void copyToClipboard(Context context, String text) {
-        ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-        if (clipboard != null) {
-            ClipData clip = ClipData.newPlainText(text, text);
-            clipboard.setPrimaryClip(clip);
-            if (Build.VERSION.SDK_INT <= 32) {
-                EventBus.getDefault().post(new MessageEvent(getString(R.string.copied_to_clipboard)));
-            }
-        }
     }
 
     private void showErrorDetails() {
@@ -625,7 +613,7 @@ public class FeedItemlistFragment extends Fragment implements AdapterView.OnItem
         }
         FeedInfoFragment fragment = FeedInfoFragment.newInstance(feed);
         if (getActivity() instanceof MainActivity) {
-            ((MainActivity) getActivity()).loadChildFragment(fragment, TransitionEffect.SLIDE);
+            ((MainActivity) getActivity()).loadChildFragment(fragment);
         } else {
             getActivity().getSupportFragmentManager()
                     .beginTransaction()

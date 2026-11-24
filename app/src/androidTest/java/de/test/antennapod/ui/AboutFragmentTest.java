@@ -5,6 +5,8 @@ import androidx.test.rule.ActivityTestRule;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import de.danoeh.antennapod.R;
 import de.danoeh.antennapod.ui.screen.preferences.PreferenceActivity;
+import androidx.test.platform.app.InstrumentationRegistry;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -14,6 +16,7 @@ import static androidx.test.espresso.assertion.ViewAssertions.matches;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.withText;
 import static de.test.antennapod.EspressoTestUtils.clickPreference;
+import static org.junit.Assume.assumeFalse;
 
 @RunWith(AndroidJUnit4.class)
 public class AboutFragmentTest {
@@ -21,6 +24,12 @@ public class AboutFragmentTest {
     @Rule
     public ActivityTestRule<PreferenceActivity> activityTestRule = new ActivityTestRule<>(PreferenceActivity.class,
             false, false);
+
+    @Before
+    public void setUp() {
+        assumeFalse(InstrumentationRegistry.getInstrumentation().getTargetContext()
+                .getPackageName().endsWith(".personal"));
+    }
 
     @Test
     public void testAboutNavigation() {

@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"
+        xmlns:content="http://purl.org/rss/1.0/modules/content/">
+    <channel>
+        <title>title</title>
+        <item>
+            <title>item-0</title>
+            <description><![CDATA[<p>Long show notes with <a href="https://example.com">links</a> and timestamps</p>]]></description>
+            <itunes:subtitle>Short summary</itunes:subtitle>
+        </item>
+        <item>
+            <title>item-1</title>
+            <content:encoded><![CDATA[<p>Hello &amp; <b>world</b></p>]]></content:encoded>
+        </item>
+        <item>
+            <title>item-2</title>
+            <description><![CDATA[<p>&nbsp;</p>]]></description>
+            <content:encoded><![CDATA[<p>Real show notes</p>]]></content:encoded>
+        </item>
+    </channel>
+</rss>

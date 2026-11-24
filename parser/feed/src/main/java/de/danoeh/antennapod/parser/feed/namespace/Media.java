@@ -124,6 +124,7 @@ public class Media extends Namespace {
             String content = state.getContentBuf().toString();
             if (state.getCurrentItem() != null) {
                 state.getCurrentItem().setDescriptionIfLonger(content);
+                state.getCurrentItem().setPreviewTextIfShorter(content);
             }
         }
     }
